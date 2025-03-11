@@ -2,70 +2,114 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Minimal YouTube Fullscreen Player</title>
+  <title>YouTube Minimalist Player</title>
   <style>
-    /* Minimal styling */
+    /* Reset some defaults */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
     body {
       font-family: sans-serif;
-      margin: 0;
-      padding: 2rem;
-      background: #f4f4f4;
+      background: #fff;
       color: #333;
     }
-    .container {
-      max-width: 800px;
-      margin: auto;
+    /* Centered input container for entering the URL */
+    #inputContainer {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
     }
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
-    }
-    p {
-      margin-bottom: 1rem;
-    }
-    input[type="text"] {
-      width: 100%;
-      padding: 0.5rem;
-      font-size: 1rem;
-      border: 1px solid #ccc;
+    #videoUrl {
+      width: 300px;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ddd;
       border-radius: 4px;
+      outline: none;
+      transition: border 0.2s ease;
     }
-    button {
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-      margin-top: 1rem;
-      border: none;
-      background: #333;
+    #videoUrl:focus {
+      border-color: #aaa;
+    }
+    #playButton {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #000;
       color: #fff;
-      cursor: pointer;
+      border: none;
       border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s ease;
     }
-    button:hover {
-      background: #555;
+    #playButton:hover {
+      background: #333;
     }
-    .player {
-      margin-top: 2rem;
+    /* Video container covers full screen */
+    #videoContainer {
       position: relative;
-      padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
-      height: 0;
+      width: 100%;
+      height: 100%;
+      display: none; /* hidden until video loads */
     }
-    .player iframe {
+    #videoContainer iframe {
+      width: 100%;
+      height: 100%;
+    }
+    /* Full overlay for pause/play and skip controls */
+    #clickOverlay {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
+      pointer-events: auto;
+    }
+    /* Skip buttons styling */
+    .skip-button {
+      position: absolute;
+      top: 50%;
+      width: 50px;
+      height: 50px;
+      margin-top: -25px;
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      cursor: pointer;
+      z-index: 101;
+      user-select: none;
+    }
+    .skip-button.left {
+      left: 20px;
+    }
+    .skip-button.right {
+      right: 20px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Minimal YouTube Fullscreen Player</h1>
-    <p>Paste a YouTube video URL below to play it in fullscreen. Click in the middle of the video to pause/play.</p>
-    <input type="text" id="videoUrl" placeholder="Enter YouTube video URL">
-    <button onclick="loadVideo()">Play Video</button>
-    <div id="videoContainer" class="player"></div>
+  <!-- Input container (no extra text) -->
+  <div id="inputContainer">
+    <input type="text" id="videoUrl" placeholder="Paste YouTube URL">
+    <br>
+    <button id="playButton" onclick="loadVideo()">Play</button>
   </div>
+  
+  <!-- Video container -->
+  <div id="videoContainer"></div>
   
   <!-- Load the YouTube IFrame API -->
   <script src="https://www.youtube.com/iframe_api"></script>
@@ -79,14 +123,18 @@
       return (match && match[1]) ? match[1] : null;
     }
 
-    // Load the video – create or update the YouTube player.
+    // Called when the user clicks the play button.
     function loadVideo() {
       var url = document.getElementById('videoUrl').value;
       var videoID = extractVideoID(url);
       if (!videoID) {
-        alert('Invalid YouTube URL. Please try again.');
+        alert('Invalid YouTube URL.');
         return;
       }
+      // Hide the input UI and show the video container.
+      document.getElementById('inputContainer').style.display = 'none';
+      document.getElementById('videoContainer').style.display = 'block';
+
       if (player) {
         player.loadVideoById(videoID);
       } else {
@@ -107,20 +155,20 @@
       }
     }
 
-    // When the player is ready, request fullscreen and add a click overlay.
+    // When the player is ready, request full screen and add overlay controls.
     function onPlayerReady(event) {
       requestFullScreen();
       createOverlay();
     }
 
-    // Ensure fullscreen is requested when the video is playing.
+    // When state changes, if playing, request full screen.
     function onPlayerStateChange(event) {
       if (event.data === YT.PlayerState.PLAYING) {
         requestFullScreen();
       }
     }
 
-    // Request fullscreen mode on the video container.
+    // Request full screen on the video container.
     function requestFullScreen() {
       var container = document.getElementById('videoContainer');
       if (container.requestFullscreen) {
@@ -132,32 +180,68 @@
       }
     }
 
-    // Create an overlay to capture clicks for pausing/playing.
+    // Create overlay for click-to-pause/play and skip controls.
     function createOverlay() {
-      if (document.getElementById('clickOverlay')) return; // Avoid duplicate overlays.
+      if (document.getElementById('clickOverlay')) return; // Prevent duplicates.
 
       var container = document.getElementById('videoContainer');
       var overlay = document.createElement('div');
       overlay.id = 'clickOverlay';
-      overlay.style.position = 'absolute';
-      overlay.style.top = '0';
-      overlay.style.left = '0';
-      overlay.style.width = '100%';
-      overlay.style.height = '100%';
-      overlay.style.backgroundColor = 'transparent';
-      overlay.style.cursor = 'pointer';
-      overlay.style.zIndex = '100';
+
+      // Toggle pause/play when clicking anywhere on the overlay.
       overlay.addEventListener('click', function() {
         var state = player.getPlayerState();
-        // If playing, pause; if paused or ended, play.
         if (state === YT.PlayerState.PLAYING) {
           player.pauseVideo();
         } else if (state === YT.PlayerState.PAUSED || state === YT.PlayerState.ENDED) {
           player.playVideo();
         }
       });
+
+      // Skip backward button.
+      var leftButton = document.createElement('div');
+      leftButton.className = 'skip-button left';
+      leftButton.innerHTML = '«';
+      leftButton.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var currentTime = player.getCurrentTime();
+        player.seekTo(Math.max(0, currentTime - 10), true);
+      });
+
+      // Skip forward button.
+      var rightButton = document.createElement('div');
+      rightButton.className = 'skip-button right';
+      rightButton.innerHTML = '»';
+      rightButton.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var currentTime = player.getCurrentTime();
+        player.seekTo(currentTime + 10, true);
+      });
+
+      overlay.appendChild(leftButton);
+      overlay.appendChild(rightButton);
       container.appendChild(overlay);
     }
+
+    // Keyboard shortcuts for skipping and play/pause.
+    document.addEventListener('keydown', function(e) {
+      if (!player) return;
+      if (e.key === 'ArrowLeft') {
+        var currentTime = player.getCurrentTime();
+        player.seekTo(Math.max(0, currentTime - 10), true);
+      } else if (e.key === 'ArrowRight') {
+        var currentTime = player.getCurrentTime();
+        player.seekTo(currentTime + 10, true);
+      } else if (e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault(); // Prevent scrolling.
+        var state = player.getPlayerState();
+        if (state === YT.PlayerState.PLAYING) {
+          player.pauseVideo();
+        } else if (state === YT.PlayerState.PAUSED || state === YT.PlayerState.ENDED) {
+          player.playVideo();
+        }
+      }
+    });
   </script>
 </body>
 </html>
