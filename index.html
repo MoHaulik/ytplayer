@@ -70,7 +70,7 @@
   <script>
     // Extract the video ID from common YouTube URL formats.
     function extractVideoID(url) {
-      var regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\\?v=|embed\/)|youtu\\.be\/)([a-zA-Z0-9_-]{11})/;
+      var regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
       var match = url.match(regex);
       return (match && match[1]) ? match[1] : null;
     }
