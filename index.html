@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Minimal YouTube Player</title>
+  <title>Minimal YouTube Fullscreen Player</title>
   <style>
-    /* Simple, minimal styling */
+    /* Minimal styling */
     body {
       font-family: sans-serif;
       margin: 0;
@@ -60,14 +60,18 @@
 </head>
 <body>
   <div class="container">
-    <h1>Minimal YouTube Player</h1>
-    <p>Paste a YouTube video URL below to play it without extra UI clutter.</p>
+    <h1>Minimal YouTube Fullscreen Player</h1>
+    <p>Paste a YouTube video URL below to play it in fullscreen. Click in the middle of the video to pause/play.</p>
     <input type="text" id="videoUrl" placeholder="Enter YouTube video URL">
     <button onclick="loadVideo()">Play Video</button>
     <div id="videoContainer" class="player"></div>
   </div>
   
+  <!-- Load the YouTube IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
   <script>
+    var player;
+
     // Extract the video ID from common YouTube URL formats.
     function extractVideoID(url) {
       var regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
@@ -75,6 +79,7 @@
       return (match && match[1]) ? match[1] : null;
     }
 
+    // Load the video – create or update the YouTube player.
     function loadVideo() {
       var url = document.getElementById('videoUrl').value;
       var videoID = extractVideoID(url);
@@ -82,17 +87,76 @@
         alert('Invalid YouTube URL. Please try again.');
         return;
       }
-      // Build the embed URL with parameters to minimize UI:
-      // - modestbranding=1: minimizes the YouTube logo
-      // - controls=0: hides the player controls
-      // - rel=0: prevents related videos from showing up at the end
-      // - iv_load_policy=3: hides video annotations
-      // - showinfo=0 (deprecated but harmless)
-      var embedUrl = 'https://www.youtube-nocookie.com/embed/' + videoID +
-                     '?rel=0&modestbranding=1&controls=0&iv_load_policy=3&showinfo=0';
-      document.getElementById('videoContainer').innerHTML =
-        '<iframe src="' + embedUrl +
-        '" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+      if (player) {
+        player.loadVideoById(videoID);
+      } else {
+        player = new YT.Player('videoContainer', {
+          videoId: videoID,
+          playerVars: {
+            rel: 0,
+            modestbranding: 1,
+            controls: 0,
+            iv_load_policy: 3,
+            autoplay: 1
+          },
+          events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+          }
+        });
+      }
+    }
+
+    // When the player is ready, request fullscreen and add a click overlay.
+    function onPlayerReady(event) {
+      requestFullScreen();
+      createOverlay();
+    }
+
+    // Ensure fullscreen is requested when the video is playing.
+    function onPlayerStateChange(event) {
+      if (event.data === YT.PlayerState.PLAYING) {
+        requestFullScreen();
+      }
+    }
+
+    // Request fullscreen mode on the video container.
+    function requestFullScreen() {
+      var container = document.getElementById('videoContainer');
+      if (container.requestFullscreen) {
+        container.requestFullscreen();
+      } else if (container.webkitRequestFullscreen) { /* Safari */
+        container.webkitRequestFullscreen();
+      } else if (container.msRequestFullscreen) { /* IE11 */
+        container.msRequestFullscreen();
+      }
+    }
+
+    // Create an overlay to capture clicks for pausing/playing.
+    function createOverlay() {
+      if (document.getElementById('clickOverlay')) return; // Avoid duplicate overlays.
+
+      var container = document.getElementById('videoContainer');
+      var overlay = document.createElement('div');
+      overlay.id = 'clickOverlay';
+      overlay.style.position = 'absolute';
+      overlay.style.top = '0';
+      overlay.style.left = '0';
+      overlay.style.width = '100%';
+      overlay.style.height = '100%';
+      overlay.style.backgroundColor = 'transparent';
+      overlay.style.cursor = 'pointer';
+      overlay.style.zIndex = '100';
+      overlay.addEventListener('click', function() {
+        var state = player.getPlayerState();
+        // If playing, pause; if paused or ended, play.
+        if (state === YT.PlayerState.PLAYING) {
+          player.pauseVideo();
+        } else if (state === YT.PlayerState.PAUSED || state === YT.PlayerState.ENDED) {
+          player.playVideo();
+        }
+      });
+      container.appendChild(overlay);
     }
   </script>
 </body>
