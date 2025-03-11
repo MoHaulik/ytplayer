@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>YouTube Minimalist Player</title>
   <style>
-    /* Reset some defaults */
+    /* Reset defaults */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -19,7 +19,7 @@
       background: #fff;
       color: #333;
     }
-    /* Centered input container for entering the URL */
+    /* Centered input container (minimal UI) */
     #inputContainer {
       position: absolute;
       top: 50%;
@@ -53,12 +53,12 @@
     #playButton:hover {
       background: #333;
     }
-    /* Video container covers full screen */
+    /* Fullscreen video container */
     #videoContainer {
       position: relative;
       width: 100%;
       height: 100%;
-      display: none; /* hidden until video loads */
+      display: none; /* Hidden until video loads */
     }
     #videoContainer iframe {
       width: 100%;
@@ -101,17 +101,17 @@
   </style>
 </head>
 <body>
-  <!-- Input container (no extra text) -->
+  <!-- Minimal input UI -->
   <div id="inputContainer">
     <input type="text" id="videoUrl" placeholder="Paste YouTube URL">
     <br>
     <button id="playButton" onclick="loadVideo()">Play</button>
   </div>
   
-  <!-- Video container -->
+  <!-- Fullscreen video container -->
   <div id="videoContainer"></div>
   
-  <!-- Load the YouTube IFrame API -->
+  <!-- YouTube IFrame API -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <script>
     var player;
@@ -123,7 +123,7 @@
       return (match && match[1]) ? match[1] : null;
     }
 
-    // Called when the user clicks the play button.
+    // Load video when play button is clicked.
     function loadVideo() {
       var url = document.getElementById('videoUrl').value;
       var videoID = extractVideoID(url);
@@ -145,7 +145,8 @@
             modestbranding: 1,
             controls: 0,
             iv_load_policy: 3,
-            autoplay: 1
+            autoplay: 1,
+            showinfo: 0  // Deprecated parameter; may have limited effect.
           },
           events: {
             'onReady': onPlayerReady,
@@ -155,40 +156,41 @@
       }
     }
 
-    // When the player is ready, request full screen and add overlay controls.
+    // On player ready: mute, request fullscreen, and add overlay controls.
     function onPlayerReady(event) {
+      event.target.mute(); // Mute video (including ads)
       requestFullScreen();
       createOverlay();
     }
 
-    // When state changes, if playing, request full screen.
+    // Re-request fullscreen when video starts playing.
     function onPlayerStateChange(event) {
       if (event.data === YT.PlayerState.PLAYING) {
         requestFullScreen();
       }
     }
 
-    // Request full screen on the video container.
+    // Request fullscreen on the video container.
     function requestFullScreen() {
       var container = document.getElementById('videoContainer');
       if (container.requestFullscreen) {
         container.requestFullscreen();
-      } else if (container.webkitRequestFullscreen) { /* Safari */
+      } else if (container.webkitRequestFullscreen) {
         container.webkitRequestFullscreen();
-      } else if (container.msRequestFullscreen) { /* IE11 */
+      } else if (container.msRequestFullscreen) {
         container.msRequestFullscreen();
       }
     }
 
     // Create overlay for click-to-pause/play and skip controls.
     function createOverlay() {
-      if (document.getElementById('clickOverlay')) return; // Prevent duplicates.
+      if (document.getElementById('clickOverlay')) return; // Prevent duplicate overlays.
 
       var container = document.getElementById('videoContainer');
       var overlay = document.createElement('div');
       overlay.id = 'clickOverlay';
 
-      // Toggle pause/play when clicking anywhere on the overlay.
+      // Toggle pause/play on click.
       overlay.addEventListener('click', function() {
         var state = player.getPlayerState();
         if (state === YT.PlayerState.PLAYING) {
@@ -223,7 +225,7 @@
       container.appendChild(overlay);
     }
 
-    // Keyboard shortcuts for skipping and play/pause.
+    // Keyboard shortcuts for skip and play/pause.
     document.addEventListener('keydown', function(e) {
       if (!player) return;
       if (e.key === 'ArrowLeft') {
