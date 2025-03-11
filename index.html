@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Minimal YouTube Player</title>
+  <style>
+    /* Simple, minimal styling */
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: #f4f4f4;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    p {
+      margin-bottom: 1rem;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.5rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      margin-top: 1rem;
+      border: none;
+      background: #333;
+      color: #fff;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    button:hover {
+      background: #555;
+    }
+    .player {
+      margin-top: 2rem;
+      position: relative;
+      padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+      height: 0;
+    }
+    .player iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Minimal YouTube Player</h1>
+    <p>Paste a YouTube video URL below to play it without extra UI clutter.</p>
+    <input type="text" id="videoUrl" placeholder="Enter YouTube video URL">
+    <button onclick="loadVideo()">Play Video</button>
+    <div id="videoContainer" class="player"></div>
+  </div>
+  
+  <script>
+    // Extract the video ID from common YouTube URL formats.
+    function extractVideoID(url) {
+      var regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\\?v=|embed\/)|youtu\\.be\/)([a-zA-Z0-9_-]{11})/;
+      var match = url.match(regex);
+      return (match && match[1]) ? match[1] : null;
+    }
+
+    function loadVideo() {
+      var url = document.getElementById('videoUrl').value;
+      var videoID = extractVideoID(url);
+      if (!videoID) {
+        alert('Invalid YouTube URL. Please try again.');
+        return;
+      }
+      // Build the embed URL with parameters to minimize UI:
+      // - modestbranding=1: minimizes the YouTube logo
+      // - controls=0: hides the player controls
+      // - rel=0: prevents related videos from showing up at the end
+      // - iv_load_policy=3: hides video annotations
+      // - showinfo=0 (deprecated but harmless)
+      var embedUrl = 'https://www.youtube-nocookie.com/embed/' + videoID +
+                     '?rel=0&modestbranding=1&controls=0&iv_load_policy=3&showinfo=0';
+      document.getElementById('videoContainer').innerHTML =
+        '<iframe src="' + embedUrl +
+        '" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+    }
+  </script>
+</body>
+</html>
