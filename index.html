@@ -23,32 +23,30 @@
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
-      z-index: 200; /* on top of everything */
+      z-index: 200;
     }
-    #inputContainer p {
-      margin-bottom: 15px;
-      font-size: 16px;
-      color: #333;
-    }
+    /* Big, pretty play button */
     #playButton {
-      padding: 10px 20px;
-      font-size: 16px;
-      background: #000;
+      padding: 20px 40px;
+      font-size: 24px;
+      background: linear-gradient(45deg, #6a11cb, #2575fc);
       color: #fff;
       border: none;
-      border-radius: 4px;
+      border-radius: 12px;
       cursor: pointer;
-      transition: background 0.2s ease;
+      transition: background 0.3s ease, transform 0.2s ease;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
     #playButton:hover {
-      background: #333;
+      background: linear-gradient(45deg, #2575fc, #6a11cb);
+      transform: scale(1.05);
     }
     /* Fullscreen video container */
     #videoContainer {
       position: relative;
       width: 100%;
       height: 100%;
-      display: none; /* hidden until video loads */
+      display: none;
     }
     #videoContainer iframe {
       width: 100%;
@@ -64,7 +62,7 @@
       pointer-events: auto;
       z-index: 101;
     }
-    /* Skip buttons styling (above masks) */
+    /* Skip buttons styling */
     .skip-button {
       position: absolute;
       top: 50%;
@@ -112,7 +110,6 @@
 <body>
   <!-- Minimal UI container -->
   <div id="inputContainer">
-    <p>Copy a YouTube URL to your clipboard then click "Play"</p>
     <button id="playButton" onclick="loadVideo()">Play</button>
   </div>
   
@@ -131,7 +128,7 @@
       return (match && match[1]) ? match[1] : null;
     }
 
-    // Load video when play button is clicked by reading the clipboard text.
+    // Load video by reading the clipboard text.
     function loadVideo() {
       if (!navigator.clipboard) {
         alert('Clipboard API not supported in your browser.');
@@ -172,9 +169,10 @@
       });
     }
 
-    // On player ready: mute, request fullscreen, and add overlays.
+    // On player ready: unmute, request fullscreen, and add overlays.
     function onPlayerReady(event) {
-      event.target.mute(); // mute video (and ads)
+      // Unmute to allow audio.
+      event.target.unMute();
       requestFullScreen();
       createOverlay();
       createMasks();
@@ -201,7 +199,7 @@
 
     // Create an overlay for click-to-pause/play and skip controls.
     function createOverlay() {
-      if (document.getElementById('clickOverlay')) return; // Prevent duplicate overlays.
+      if (document.getElementById('clickOverlay')) return;
 
       var container = document.getElementById('videoContainer');
       var overlay = document.createElement('div');
@@ -246,15 +244,12 @@
     function createMasks() {
       var container = document.getElementById('videoContainer');
 
-      // Create top mask (if not already created)
       if (!document.getElementById('maskTop')) {
         var maskTop = document.createElement('div');
         maskTop.id = 'maskTop';
         maskTop.className = 'mask';
         container.appendChild(maskTop);
       }
-
-      // Create bottom mask (if not already created)
       if (!document.getElementById('maskBottom')) {
         var maskBottom = document.createElement('div');
         maskBottom.id = 'maskBottom';
@@ -273,7 +268,7 @@
         var currentTime = player.getCurrentTime();
         player.seekTo(currentTime + 10, true);
       } else if (e.key === ' ' || e.key === 'Spacebar') {
-        e.preventDefault(); // Prevent scrolling.
+        e.preventDefault();
         var state = player.getPlayerState();
         if (state === YT.PlayerState.PLAYING) {
           player.pauseVideo();
