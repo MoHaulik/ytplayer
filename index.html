@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>YouTube Minimalist Player</title>
   <style>
-    /* Reset defaults */
+    /* Reset and basic styles */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -13,34 +13,24 @@
     html, body {
       height: 100%;
       overflow: hidden;
-    }
-    body {
-      font-family: sans-serif;
       background: #fff;
-      color: #333;
+      font-family: sans-serif;
     }
-    /* Centered input container (minimal UI) */
+    /* Centered UI container (minimal UI) */
     #inputContainer {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
+      z-index: 200; /* on top of everything */
     }
-    #videoUrl {
-      width: 300px;
-      padding: 10px;
+    #inputContainer p {
+      margin-bottom: 15px;
       font-size: 16px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      outline: none;
-      transition: border 0.2s ease;
-    }
-    #videoUrl:focus {
-      border-color: #aaa;
+      color: #333;
     }
     #playButton {
-      margin-top: 10px;
       padding: 10px 20px;
       font-size: 16px;
       background: #000;
@@ -58,13 +48,13 @@
       position: relative;
       width: 100%;
       height: 100%;
-      display: none; /* Hidden until video loads */
+      display: none; /* hidden until video loads */
     }
     #videoContainer iframe {
       width: 100%;
       height: 100%;
     }
-    /* Full overlay for pause/play and skip controls */
+    /* Overlay for click-to-pause/play and skip controls */
     #clickOverlay {
       position: absolute;
       top: 0;
@@ -72,8 +62,9 @@
       width: 100%;
       height: 100%;
       pointer-events: auto;
+      z-index: 101;
     }
-    /* Skip buttons styling */
+    /* Skip buttons styling (above masks) */
     .skip-button {
       position: absolute;
       top: 50%;
@@ -89,7 +80,7 @@
       justify-content: center;
       font-size: 2rem;
       cursor: pointer;
-      z-index: 101;
+      z-index: 103;
       user-select: none;
     }
     .skip-button.left {
@@ -98,69 +89,95 @@
     .skip-button.right {
       right: 20px;
     }
+    /* Overlays to cover YouTube UI elements */
+    .mask {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      pointer-events: none;
+      z-index: 102;
+      background: #000;
+      opacity: 0.7;
+    }
+    #maskTop {
+      top: 0;
+      height: 60px;
+    }
+    #maskBottom {
+      bottom: 0;
+      height: 100px;
+    }
   </style>
 </head>
 <body>
-  <!-- Minimal input UI -->
+  <!-- Minimal UI container -->
   <div id="inputContainer">
-    <input type="text" id="videoUrl" placeholder="Paste YouTube URL">
-    <br>
+    <p>Copy a YouTube URL to your clipboard then click "Play"</p>
     <button id="playButton" onclick="loadVideo()">Play</button>
   </div>
   
   <!-- Fullscreen video container -->
   <div id="videoContainer"></div>
   
-  <!-- YouTube IFrame API -->
+  <!-- Load the YouTube IFrame API -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <script>
     var player;
 
-    // Extract the video ID from common YouTube URL formats.
+    // Extract video ID from common YouTube URL formats.
     function extractVideoID(url) {
       var regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
       var match = url.match(regex);
       return (match && match[1]) ? match[1] : null;
     }
 
-    // Load video when play button is clicked.
+    // Load video when play button is clicked by reading the clipboard text.
     function loadVideo() {
-      var url = document.getElementById('videoUrl').value;
-      var videoID = extractVideoID(url);
-      if (!videoID) {
-        alert('Invalid YouTube URL.');
+      if (!navigator.clipboard) {
+        alert('Clipboard API not supported in your browser.');
         return;
       }
-      // Hide the input UI and show the video container.
-      document.getElementById('inputContainer').style.display = 'none';
-      document.getElementById('videoContainer').style.display = 'block';
+      navigator.clipboard.readText().then(function(text) {
+        var videoID = extractVideoID(text);
+        if (!videoID) {
+          alert('Clipboard does not contain a valid YouTube URL.');
+          return;
+        }
+        // Hide the minimal UI and show the video container.
+        document.getElementById('inputContainer').style.display = 'none';
+        document.getElementById('videoContainer').style.display = 'block';
 
-      if (player) {
-        player.loadVideoById(videoID);
-      } else {
-        player = new YT.Player('videoContainer', {
-          videoId: videoID,
-          playerVars: {
-            rel: 0,
-            modestbranding: 1,
-            controls: 0,
-            iv_load_policy: 3,
-            autoplay: 1,
-            showinfo: 0  // Deprecated parameter; may have limited effect.
-          },
-          events: {
-            'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange
-          }
-        });
-      }
+        if (player) {
+          player.loadVideoById(videoID);
+        } else {
+          player = new YT.Player('videoContainer', {
+            videoId: videoID,
+            playerVars: {
+              rel: 0,
+              modestbranding: 1,
+              controls: 0,
+              iv_load_policy: 3,
+              autoplay: 1,
+              showinfo: 0
+            },
+            events: {
+              'onReady': onPlayerReady,
+              'onStateChange': onPlayerStateChange
+            }
+          });
+        }
+      }).catch(function(err) {
+        console.error('Failed to read clipboard: ', err);
+        alert('Failed to access clipboard. Please allow clipboard permissions and try again.');
+      });
     }
 
-    // On player ready: mute, request fullscreen, and add overlay controls.
+    // On player ready: mute, request fullscreen, and add overlays.
     function onPlayerReady(event) {
-      event.target.mute(); // Mute video (including ads)
+      event.target.mute(); // mute video (and ads)
       requestFullScreen();
       createOverlay();
+      createMasks();
     }
 
     // Re-request fullscreen when video starts playing.
@@ -182,7 +199,7 @@
       }
     }
 
-    // Create overlay for click-to-pause/play and skip controls.
+    // Create an overlay for click-to-pause/play and skip controls.
     function createOverlay() {
       if (document.getElementById('clickOverlay')) return; // Prevent duplicate overlays.
 
@@ -223,6 +240,27 @@
       overlay.appendChild(leftButton);
       overlay.appendChild(rightButton);
       container.appendChild(overlay);
+    }
+
+    // Create extra masks to cover parts of the YouTube UI.
+    function createMasks() {
+      var container = document.getElementById('videoContainer');
+
+      // Create top mask (if not already created)
+      if (!document.getElementById('maskTop')) {
+        var maskTop = document.createElement('div');
+        maskTop.id = 'maskTop';
+        maskTop.className = 'mask';
+        container.appendChild(maskTop);
+      }
+
+      // Create bottom mask (if not already created)
+      if (!document.getElementById('maskBottom')) {
+        var maskBottom = document.createElement('div');
+        maskBottom.id = 'maskBottom';
+        maskBottom.className = 'mask';
+        container.appendChild(maskBottom);
+      }
     }
 
     // Keyboard shortcuts for skip and play/pause.
